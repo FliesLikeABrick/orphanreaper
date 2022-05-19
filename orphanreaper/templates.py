@@ -1,6 +1,7 @@
 import ciscoconfparse
 import glob
 import logging
+import re
 import yaml
 
 
@@ -41,23 +42,23 @@ class Templates():
       template_files = glob.glob(template_config_row['path_glob'])
       # dict of file path to contents
       template_config_row['file_contents'] = {}
-      for template_file in template_files:
+      for template_file_name in template_files:
         try:
-          with open(template_file) as f:
+          with open(template_file_name) as f:
             template_file_data = f.read()
         except Exception as exc:
-          self.logger.error("Failed to open template file %s, check file existence, permissions, etc.  Exception raised: %s", template_file, exc)
+          self.logger.error("Failed to open template file %s, check file existence, permissions, etc.  Exception raised: %s", template_file_name, exc)
           return None
         try:
           template_file_yaml = yaml.safe_load(template_file_data)
         except Exception as exc:
-          self.logger.error("Failed to load YAML from template file %s, check file contents.  Exception raised: %s", template_file, exc)
+          self.logger.error("Failed to load YAML from template file %s, check file contents.  Exception raised: %s", template_file_name, exc)
           return None
-        if template_file in template_config_row['file_contents']:
+        if template_file_name in template_config_row['file_contents']:
           # this should not be able to happen, it would require two files of the same name in the same glob from the config
           self.logger.error("Template file %s appears to already be loaded, but the glob %s may be matching it or one of the same name again, please check configuration and template files for sanity.", template_file, template_config_row['path_glob'])
           return None
-        template_config_row['file_contents'][template_file] = template_file_yaml
+        template_config_row['file_contents'][template_file_name] = template_file_yaml
         number_of_loaded_templates_from_this_row += 1
         number_of_loaded_templates += number_of_loaded_templates_from_this_row
       self.logger.info("Loaded %s templates from path_glob %s", number_of_loaded_templates, template_config_row['path_glob'])
@@ -67,33 +68,54 @@ class Templates():
     Log an error and return False when duplicate template names are encountered within one directory or if other undefined conditions are encountered'''
     self.index = {}
     for template_config_row in self.config.get_section('templates'):
-      template_names_in_this_path = {}
-      for template_file, file_contents in template_config_row['file_contents'].items():
-        template_name = file_contents['meta']['name']
-        if template_name in template_names_in_this_path:
-          self.logger.error("Template file %s is attempting to use the name %s which is already in use from template file %s", template_file, template_names_in_this_path[template_name])
+      templates_in_this_path = {}
+      for template_file_name, file_contents in template_config_row['file_contents'].items():
+        template_slug = file_contents['meta']['slug']
+        if template_slug in templates_in_this_path:
+          self.logger.error("Template file %s is attempting to use the name %s which is already in use from template file %s", template_file_name, template_names_in_this_path[template_slug])
           return False
         # this will overwrite entries in the order they appear in the configuration, if the check above passed
-        self.index[template_name] = template_config_row 
+        self.index[template_slug] = template_config_row 
         # update the cache of template names used in this path/glob of files
-        template_names_in_this_path[template_name] = template_file
+        templates_in_this_path[template_slug] = file_contents
+    self.logger.debug("Template Index has loaded template slugs: %s", ','.join(self.index.keys()))
     return True
-  def get(self, template_name):
-    '''Return a template when referenced by name'''
+  def get(self, template_slug=None):
+    '''Return a template when referenced by name.  Returns all templates when no name is specified'''
     if self.index is None:
       self.logger.error("Template index has been accessed before it was built.  Application behavior may continue with incomplete results.")
       return None
-    if template_name in self.index:
-      return index[template_name]
+    if template_slug is None:
+      return list(self.index.values())
+    if template_slug in self.index:
+      return self.index[template_slug]
     else:
       return None
  
   def get_objects(self, file):
     '''Returns a list of dicts describing configuration objects present in the given input file'''
-
+    parser = ciscoconfparse.CiscoConfParse(config=file['lines'])
+    template = self.get(file['template'])
+    return_objects = []
+    for obj_def in template['objects']:
+      cfg_line_matches = parser.find_lines(obj_def['regex'])
+      if cfg_line_matches:
+        self.logger.debug("In input file %s, found %s matching lines for template `%s` object definition `%s`", file['filename'], len(matches), template['name'])
+        # extract the object name
+        # TODO - precompile regexes back when the configs were loaded
+        for line in cfg_line_matches:
+          new_obj = {}
+          name_matches = re.search(obj_def['regex'], line)
+          if not name_matches:
+            self.logger.warning("In input file %s, the following line matched the initial search but a name could not be extracted.  Check template `%s` regex for object `%s`: %s", file['filename'], template['meta']['name'], obj_def['slug'], line)
+            continue
+          new_obj['name'] = name_matches.group(name)
+          new_obj['type'] = obj_def['name']
+          return_objects.append(new_obj)
+      return return_objects
   def get_references(self, file):
     '''Returns a dictionary mapping of object-to-list-of-references for each object found in this file'''
-
+    parser = ciscoconfparse.CiscoConfParse(config=file['lines'])
   def get_orphans(self, file):
     '''Returns list of dicts describing configuration objects present in the given input file which have no known configuration references'''
     objects = self.get_objects(file)
@@ -102,13 +124,4 @@ class Templates():
       if obj['name'] not in references:
         self.logger.info("Object %s has no references", obj['name'])
 
-
-  def parse(self, file, template_name):
-    '''Parse configuration and return elements'''
-    # call helper method to get configuration sections depending on block style
-    
-    # keys used in each row: type, name, contents
-
-
-    return elements
 

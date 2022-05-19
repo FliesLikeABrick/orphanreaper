@@ -87,7 +87,9 @@ class OrphanReaper():
           else:
             self.logger.error("Exiting due to missing or invalid file found during validation of input: %s", filename)
             sys.exit()
-        self.files.append({'filename':filename, 'fd':open(filename), 'template':template_name})
+        with open(filename) as f:
+          lines = [line.strip('\r\n') for line in f.readlines()]
+        self.files.append({'filename':filename, 'lines':lines, 'template':template_name})
       self.logger.debug("Iteration of files for template %s complete, now removing %s entries that were found to be empty or missing", template_name, len(remove_files_from_template))
       self.filenames[template_name].difference_update(remove_files_from_template)
       self.logger.debug("File list for template %s now contains: %s", template_name, self.filenames[template_name])

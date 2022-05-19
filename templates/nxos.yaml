@@ -1,5 +1,6 @@
 meta:
   name: Cisco NX-OS
+  slug: nxos # This is what the user tags their input files with, to specify that the file(s) use this template.
   section: indent # sections are indented.  Other options are 'braces' {} , 'brackets' [], and 'prefix'.  Required.
 objects:
   - name: IP Prefix List

@@ -22,19 +22,22 @@ class Reaper():
     '''Sanity checks prior to looking for orphaned configuration'''
     # check that all files have templates which exist in the configuration
     templates_used_by_files = set([file['template'] for file in self.files])
-    templates_in_configuration = set(self.config.get_templates().keys())
-    if not templates_used_by_files < templates_in_configuration:
-      self.logger.error("The following templates referenced for input files are not present in the configuration: %s", templates_in_configuration-templates_used_by_files)
+    self.logger.debug("Templates referenced by user input: %s", templates_used_by_files)
+    templates_in_configuration = set(self.templates.index.keys())
+    self.logger.debug("Templates loaded from configuration: %s", templates_in_configuration)
+    if not templates_used_by_files <= templates_in_configuration:
+      self.logger.error("The following templates referenced for input files are not present in the configuration: %s", templates_used_by_files-templates_in_configuration)
       return False
 
-    
+    return True
   def find_orphans(self):
-    if not self.preflight()
+    if not self.preflight():
+      return None
+    orphan_count = 0
     for file in self.files:
       
-      orphans = self.templates.get_orphans(file)
-
-      # find configuration elements with no references and return them
-    return orphans
+      file['orphans'] = self.templates.get_orphans(file)
+      orphan_count += len(file['orphans'])
+    return orphan_count
   def reap_orphans(self):
     pass
