@@ -15,8 +15,9 @@ class Reaper():
   def open_files(self):
     '''Loop through self.files and open each file that is not yet opened'''
     for file in self.files:
-      if 'fd' not in file:
-        file['fd'] = open(file)
+      if 'contents' not in file:
+        with open(file) as f:
+          file['contents'] = f.read()
   def preflight(self):
     '''Sanity checks prior to looking for orphaned configuration'''
     # check that all files have templates which exist in the configuration
@@ -26,17 +27,14 @@ class Reaper():
       self.logger.error("The following templates referenced for input files are not present in the configuration: %s", templates_in_configuration-templates_used_by_files)
       return False
 
-    # check that all
+    
   def find_orphans(self):
+    if not self.preflight()
     for file in self.files:
-      # get the template
-      orphans = self.templates.execute(file['template'])
-      if orphans is None:
-        self.logger.error("File %s references template %s which is not loaded.  Aborting search for orphans.", file['filename'], file['template'])
-        return None
-      # execute the template to parse this configuration
+      
+      orphans = self.templates.get_orphans(file)
 
       # find configuration elements with no references and return them
-    pass
+    return orphans
   def reap_orphans(self):
     pass

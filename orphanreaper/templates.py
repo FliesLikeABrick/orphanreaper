@@ -1,3 +1,4 @@
+import ciscoconfparse
 import glob
 import logging
 import yaml
@@ -87,6 +88,20 @@ class Templates():
     else:
       return None
  
+  def get_objects(self, file):
+    '''Returns a list of dicts describing configuration objects present in the given input file'''
+
+  def get_references(self, file):
+    '''Returns a dictionary mapping of object-to-list-of-references for each object found in this file'''
+
+  def get_orphans(self, file):
+    '''Returns list of dicts describing configuration objects present in the given input file which have no known configuration references'''
+    objects = self.get_objects(file)
+    references = self.get_references(file)
+    for obj in objects:
+      if obj['name'] not in references:
+        self.logger.info("Object %s has no references", obj['name'])
+
 
   def parse(self, file, template_name):
     '''Parse configuration and return elements'''
