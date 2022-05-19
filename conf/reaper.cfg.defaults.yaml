@@ -1,0 +1,4 @@
+templates:
+  - path_glob: templates/*.yaml # relative to the location of orphanreaper.py
+    comment: Default directory containing template yaml
+    # additional paths are permitted to overwrite previously-loaded templates with the same name
