@@ -98,15 +98,18 @@ class Templates():
       return None
  
   def get_objects(self, file):
-    '''Returns a list of dicts describing configuration objects present in the given input file'''
+    '''Returns a dict of dicts describing configuration objects present in the given input file'''
     parser = ciscoconfparse.CiscoConfParse(config=file['lines'])
     template = self.get(file['template'])
     if not template:
       self.logger.error("Template with slug `%s` not found, aborting search for objects", file['template'])
       return None
     self.logger.debug("Parsing file `%s` using template `%s`", file['filename'], template['meta']['name'])
-    return_objects = []
+    # dict of object slugs to set of names of that type of object
+    return_objects = {}
     for obj_def in template['objects']:
+      if obj_def['slug'] not in return_objects:
+        return_objects[obj_def['slug']] = set()
       cfg_line_matches = parser.find_lines(obj_def['regex'])
       if cfg_line_matches:
         self.logger.debug("In input file %s, found %s matching lines for template `%s` object definition `%s`", file['filename'], len(cfg_line_matches), file['template'], obj_def['name'])
@@ -118,9 +121,7 @@ class Templates():
           if not name_matches:
             self.logger.warning("In input file %s, the following line matched the initial search but a name could not be extracted.  Check template `%s` regex for object `%s`: %s", file['filename'], template['meta']['name'], obj_def['name'], line)
             continue
-          new_obj['name'] = name_matches.group('name')
-          new_obj['type'] = obj_def['name']
-          return_objects.append(new_obj)
+          return_objects[obj_def['slug']].add(name_matches.group('name'))
       return return_objects
   def get_references(self, file):
     '''Returns a dictionary mapping of object-to-list-of-references for each object found in this file'''
@@ -130,8 +131,10 @@ class Templates():
       self.logger.error("Template with slug `%s` not found, aborting search for objects", file['template'])
       return None
     self.logger.debug("Parsing file `%s` using template `%s`", file['filename'], template['meta']['name'])
-    return_references = []
+    return_references = {}
     for obj_def in template['objects']:
+      if obj_def['slug'] not in return_references:
+        return_references[obj_def['slug']] = set()
       # could possibly optimize in the future by combining
       # all of the reference regexes into a single one?
       # TODO -- instead of just tallying up references, save the lineage
@@ -143,24 +146,29 @@ class Templates():
           # extract the object name from the reference and make sure it matches
           # TODO - precompile regexes back when the configs were loaded
           for line in cfg_line_matches:
+            # safety -- make sure this line does not match the line that defines this object
+            if re.search(obj_def['regex'], line):
+              self.logger.debug("Skipping line `%s` due to it matching the definition of this object `%s`", line, obj_def['regex'])
+              continue
             new_ref = {}
             name_matches = re.search(reference_def['regex'], line)
             if not name_matches:
               self.logger.warning("In input file %s, the following line matched the initial reference search but a name could not be extracted.  Check template `%s` regex for reference `%s`: %s", file['filename'], template['meta']['name'], ref_def['name'], line)
               continue
-            new_ref['name'] = name_matches.group('name')
-            new_ref['type'] = reference_def['name']
-            return_references.append(new_ref)
+            return_references[obj_def['slug']].add(name_matches.group('name'))
       return return_references
   def get_orphans(self, file):
     '''Returns list of dicts describing configuration objects present in the given input file which have no known configuration references'''
     objects = self.get_objects(file)
     references = self.get_references(file)
-    return_orphans = []
-    for obj in objects:
-      if obj['name'] not in references:
-        self.logger.info("%s Object %s has no references", file['filename'],obj['name'])
-        return_orphans.append(obj)
+    return_orphans = {}
+    for obj_definition_slug, obj_instances in objects.items():
+      if obj_definition_slug not in return_orphans:
+        return_orphans[obj_definition_slug] = set()
+      for obj_name in obj_instances:
+        if obj_name not in references[obj_definition_slug]:
+          self.logger.info("%s %s %s has no references", file['filename'],obj_definition_slug, obj_name)
+          return_orphans[obj_definition_slug].add(obj_name)
     return return_orphans
 
 
