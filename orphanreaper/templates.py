@@ -54,6 +54,10 @@ class Templates():
         except Exception as exc:
           self.logger.error("Failed to load YAML from template file %s, check file contents.  Exception raised: %s", template_file_name, exc)
           return None
+        mandatory_template_fields = {'objects','meta'}
+        if not set(template_file_yaml.keys()) <= mandatory_template_fields:
+          self.logger.error("Template %s is missing one or more mandatory fields: %s.  Template is not being loaded", mandatory_template_fields-set(template_file_yaml.keys()))
+          continue 
         if template_file_name in template_config_row['file_contents']:
           # this should not be able to happen, it would require two files of the same name in the same glob from the config
           self.logger.error("Template file %s appears to already be loaded, but the glob %s may be matching it or one of the same name again, please check configuration and template files for sanity.", template_file, template_config_row['path_glob'])
@@ -72,10 +76,11 @@ class Templates():
       for template_file_name, file_contents in template_config_row['file_contents'].items():
         template_slug = file_contents['meta']['slug']
         if template_slug in templates_in_this_path:
-          self.logger.error("Template file %s is attempting to use the name %s which is already in use from template file %s", template_file_name, template_names_in_this_path[template_slug])
+          self.logger.error("Template file %s is attempting to use the slug %s which is already in use from template file %s", template_file_name, template_names_in_this_path[template_slug])
           return False
         # this will overwrite entries in the order they appear in the configuration, if the check above passed
-        self.index[template_slug] = template_config_row 
+        self.logger.debug("Loaded template `%s`", template_slug)
+        self.index[template_slug] = file_contents 
         # update the cache of template names used in this path/glob of files
         templates_in_this_path[template_slug] = file_contents
     self.logger.debug("Template Index has loaded template slugs: %s", ','.join(self.index.keys()))
@@ -96,32 +101,67 @@ class Templates():
     '''Returns a list of dicts describing configuration objects present in the given input file'''
     parser = ciscoconfparse.CiscoConfParse(config=file['lines'])
     template = self.get(file['template'])
+    if not template:
+      self.logger.error("Template with slug `%s` not found, aborting search for objects", file['template'])
+      return None
+    self.logger.debug("Parsing file `%s` using template `%s`", file['filename'], template['meta']['name'])
     return_objects = []
     for obj_def in template['objects']:
       cfg_line_matches = parser.find_lines(obj_def['regex'])
       if cfg_line_matches:
-        self.logger.debug("In input file %s, found %s matching lines for template `%s` object definition `%s`", file['filename'], len(matches), template['name'])
+        self.logger.debug("In input file %s, found %s matching lines for template `%s` object definition `%s`", file['filename'], len(cfg_line_matches), file['template'], obj_def['name'])
         # extract the object name
         # TODO - precompile regexes back when the configs were loaded
         for line in cfg_line_matches:
           new_obj = {}
           name_matches = re.search(obj_def['regex'], line)
           if not name_matches:
-            self.logger.warning("In input file %s, the following line matched the initial search but a name could not be extracted.  Check template `%s` regex for object `%s`: %s", file['filename'], template['meta']['name'], obj_def['slug'], line)
+            self.logger.warning("In input file %s, the following line matched the initial search but a name could not be extracted.  Check template `%s` regex for object `%s`: %s", file['filename'], template['meta']['name'], obj_def['name'], line)
             continue
-          new_obj['name'] = name_matches.group(name)
+          new_obj['name'] = name_matches.group('name')
           new_obj['type'] = obj_def['name']
           return_objects.append(new_obj)
       return return_objects
   def get_references(self, file):
     '''Returns a dictionary mapping of object-to-list-of-references for each object found in this file'''
     parser = ciscoconfparse.CiscoConfParse(config=file['lines'])
+    template = self.get(file['template'])
+    if not template:
+      self.logger.error("Template with slug `%s` not found, aborting search for objects", file['template'])
+      return None
+    self.logger.debug("Parsing file `%s` using template `%s`", file['filename'], template['meta']['name'])
+    return_references = []
+    for obj_def in template['objects']:
+      # could possibly optimize in the future by combining
+      # all of the reference regexes into a single one?
+      # TODO -- instead of just tallying up references, save the lineage
+      # so that the user can be presented with the full config path to the reference in question
+      for reference_def in obj_def['references']:
+        cfg_line_matches = parser.find_lines(reference_def['regex'])
+        if cfg_line_matches:
+          self.logger.debug("In input file %s, found %s matching lines for template `%s`, object `%s` reference definition `%s`", file['filename'], len(cfg_line_matches), file['template'], obj_def['name'], reference_def['name'])
+          # extract the object name from the reference and make sure it matches
+          # TODO - precompile regexes back when the configs were loaded
+          for line in cfg_line_matches:
+            new_ref = {}
+            name_matches = re.search(reference_def['regex'], line)
+            if not name_matches:
+              self.logger.warning("In input file %s, the following line matched the initial reference search but a name could not be extracted.  Check template `%s` regex for reference `%s`: %s", file['filename'], template['meta']['name'], ref_def['name'], line)
+              continue
+            new_ref['name'] = name_matches.group('name')
+            new_ref['type'] = reference_def['name']
+            return_references.append(new_ref)
+      return return_references
   def get_orphans(self, file):
     '''Returns list of dicts describing configuration objects present in the given input file which have no known configuration references'''
     objects = self.get_objects(file)
     references = self.get_references(file)
+    return_orphans = []
     for obj in objects:
       if obj['name'] not in references:
-        self.logger.info("Object %s has no references", obj['name'])
+        self.logger.info("%s Object %s has no references", file['filename'],obj['name'])
+        return_orphans.append(obj)
+    return return_orphans
+
 
 

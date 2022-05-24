@@ -4,16 +4,16 @@ meta:
   section: indent # sections are indented.  Other options are 'braces' {} , 'brackets' [], and 'prefix'.  Required.
 objects:
   - name: IP Prefix List
-    regex: ^ip prefix-list (?P<name>[a-zA-Z0-9_-])
+    regex: "^ip prefix-list (?P<name>[a-zA-Z0-9_-]+)"
     references: # regexes for references to this object
       - name: "reference from route-map"
-        regex: match ip address prefix-list (?P<name>[a-zA-Z0-9_-]) # route-map matches
+        regex: "match ip address prefix-list (?P<name>[a-zA-Z0-9_-]+)" # route-map matches
     cleanup: no ip prefix-list %s
   - name: IPv6 Prefix List
-    regex: ^ipv6 prefix-list (?P<name>[a-zA-Z0-9_-])
+    regex: "^ipv6 prefix-list (?P<name>[a-zA-Z0-9_-]+)"
     references: # regexes for references to this object
       - name: "reference from route-map"
-        regex: "match ipv6 address prefix-list (?P<name>[a-zA-Z0-9_-])" # route-map matches
+        regex: "match ipv6 address prefix-list (?P<name>[a-zA-Z0-9_-]+)" # route-map matches
     cleanup: no ipv6 prefix-list %s
   - name: route-map
     regex: ^route-map (?P<name>[a-zA-Z0-9_-])

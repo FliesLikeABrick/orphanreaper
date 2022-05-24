@@ -39,5 +39,5 @@ class Reaper():
       file['orphans'] = self.templates.get_orphans(file)
       orphan_count += len(file['orphans'])
     return orphan_count
-  def reap_orphans(self):
+  def reap_orphans(self,orphans):
     pass
