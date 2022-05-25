@@ -5,31 +5,60 @@ meta:
 objects:
   - name: IP Prefix List
     slug: ip_prefix_list
-    regex: "^ip prefix-list (?P<name>[a-zA-Z0-9_-]+)"
+    regex: '^ip prefix-list (?P<name>[a-zA-Z0-9_-]+)'
     references: # regexes for references to this object
-      - name: "reference from route-map"
-        regex: "match ip address prefix-list (?P<name>[a-zA-Z0-9_-]+)" # route-map matches
-      - name: "generic prefix-list match"
-        regex: " prefix-list (?P<name>[a-zA-Z0-9_-]+)"
+      - name: 'reference from route-map'
+        regex: 'match ip address prefix-list (?P<name>[a-zA-Z0-9_-]+)' # route-map matches
+      - name: 'generic prefix-list match'
+        regex: ' prefix-list (?P<name>[a-zA-Z0-9_-]+)'
     cleanup: no ip prefix-list %s
   - name: IPv6 Prefix List
     slug: ipv6_prefix_list
-    regex: "^ipv6 prefix-list (?P<name>[a-zA-Z0-9_-]+)"
+    regex: '^ipv6 prefix-list (?P<name>[a-zA-Z0-9_-]+)'
     references: # regexes for references to this object
-      - name: "reference from route-map"
-        regex: "match ipv6 address prefix-list (?P<name>[a-zA-Z0-9_-]+)" # route-map matches
+      - name: 'reference from route-map'
+        regex: 'match ipv6 address prefix-list (?P<name>[a-zA-Z0-9_-]+)' # route-map matches
     cleanup: no ipv6 prefix-list %s
   - name: route-map
     slug: route_map
-    regex: "^route-map (?P<name>[a-zA-Z0-9_-]+)"
+    regex: '^route-map (?P<name>[a-zA-Z0-9_-]+)'
     references: # regexes for references to this object
-      - name: "generic -map reference"
-        regex: "-map (?P<name>[a-zA-Z0-9_-]+)" # route-map matches
+      - name: 'generic -map reference'
+        regex: '-map (?P<name>[a-zA-Z0-9_-]+)' # route-map matches
     cleanup: no route-map %s
-  - name: "as-path access list"
+  - name: 'as-path access list'
     slug: as_path_acl
-    regex: "^ip as-path access-list (?P<name>[a-zA-Z0-9_-]+)"
+    regex: '^ip as-path access-list (?P<name>[a-zA-Z0-9_-]+)'
     references:
-      - name: "match as-path"
-        regex: "match as-path (?P<name>[a-zA-Z0-9_-]+)"
+      - name: 'match as-path'
+        regex: 'match as-path (?P<name>[a-zA-Z0-9_-]+)'
     cleanup: no ip as-path %s
+  - name: 'community-list standard'
+    slug: community_list_standard
+    regex: '^ip community-list standard (?P<name>[a-zA-Z0-9_-]+)'
+    references:
+      - name: 'match community-list'
+        regex: 'match community-list (?P<name>[a-zA-Z0-9_-]+)'
+    cleanup: no ip ip community-list extended %s
+  - name: 'community-ist extended'
+    slug: community_list_extended
+    regex: '^ip community-list expanded (?P<name>[a-zA-Z0-9_-]+)'
+    references:
+      - name: 'match community'
+        regex: 'match community (?P<name>[a-zA-Z0-9_-]+)'
+    cleanup: no ip community-list expanded %s
+  - name: 'ip access-list'
+    slug: ip access-list
+    regex: '^ip access-list (?P<name>[a-zA-Z0-9_-]+)'
+    references:
+      - name: 'ntp access-group'
+        regex: '^ntp access-group [0-9a-z-]+ (?P<name>[a-zA-Z0-9_-]+)'
+      - name: 'match access-group'
+        regex: 'match access-group name (?P<name>[a-zA-Z0-9_-]+)'
+      - name: 'snmp ipv4acl'
+        regex: '^snmp-server .* use-ipv4acl (?P<name>[a-zA-Z0-9_-]+)'
+      - name: 'access-class'
+        regex: 'access-class (?P<name>[a-zA-Z0-9_-]+)'
+      - name: 'interface access-group'
+        regex: '\s+ip access-group (?P<name>[a-zA-Z0-9_-]+)'
+    cleanup: no ip access-list %s
