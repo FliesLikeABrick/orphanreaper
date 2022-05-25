@@ -108,6 +108,7 @@ class Templates():
     # dict of object slugs to set of names of that type of object
     return_objects = {}
     for obj_def in template['objects']:
+      self.logger.debug("Looking for objects of type `%s` with regex: %s", obj_def['slug'], obj_def['regex'])
       if obj_def['slug'] not in return_objects:
         return_objects[obj_def['slug']] = set()
       cfg_line_matches = parser.find_lines(obj_def['regex'])
@@ -122,7 +123,7 @@ class Templates():
             self.logger.warning("In input file %s, the following line matched the initial search but a name could not be extracted.  Check template `%s` regex for object `%s`: %s", file['filename'], template['meta']['name'], obj_def['name'], line)
             continue
           return_objects[obj_def['slug']].add(name_matches.group('name'))
-      return return_objects
+    return return_objects
   def get_references(self, file):
     '''Returns a dictionary mapping of object-to-list-of-references for each object found in this file'''
     parser = ciscoconfparse.CiscoConfParse(config=file['lines'])
@@ -156,7 +157,7 @@ class Templates():
               self.logger.warning("In input file %s, the following line matched the initial reference search but a name could not be extracted.  Check template `%s` regex for reference `%s`: %s", file['filename'], template['meta']['name'], ref_def['name'], line)
               continue
             return_references[obj_def['slug']].add(name_matches.group('name'))
-      return return_references
+    return return_references
   def get_orphans(self, file):
     '''Returns list of dicts describing configuration objects present in the given input file which have no known configuration references'''
     objects = self.get_objects(file)
