@@ -21,8 +21,15 @@ objects:
     cleanup: no ipv6 prefix-list %s
   - name: route-map
     slug: route_map
-    regex: ^route-map (?P<name>[a-zA-Z0-9_-]+)
+    regex: "^route-map (?P<name>[a-zA-Z0-9_-]+)"
     references: # regexes for references to this object
       - name: "generic -map reference"
         regex: "-map (?P<name>[a-zA-Z0-9_-]+)" # route-map matches
     cleanup: no route-map %s
+  - name: "as-path access list"
+    slug: as_path_acl
+    regex: "^ip as-path access-list (?P<name>[a-zA-Z0-9_-]+)"
+    references:
+      - name: "match as-path"
+        regex: "match as-path (?P<name>[a-zA-Z0-9_-]+)"
+    cleanup: no ip as-path %s
