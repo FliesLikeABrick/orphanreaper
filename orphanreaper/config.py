@@ -31,7 +31,7 @@ class Config():
         with open(self.ucf) as yf:
             userCfg = yaml.safe_load(yf.read())
     except FileNotFoundError as e:
-        sys.stderr.write("Failed to open configuration file %s\n%s\n" % (ucf,str(e)))
+        sys.stderr.write("Failed to open configuration file %s\n%s\n" % (self.ucf,str(e)))
         sys.stderr.write("Copy reaper.cfg.example.yaml to reaper.cfg.yaml or\n")
         sys.stderr.write("use --defaults to run without a configuration file, which will all default values (not recommended).\n")
         sys.exit(1)

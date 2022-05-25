@@ -102,6 +102,7 @@ class OrphanReaper():
     parser.add_argument('-q','--quiet', action="store_true", help="Suppress informational output.  Errors and warnings will still be printed to stderr")
     parser.add_argument('-d','--debug', action="store_true", help="Debug output.  Overrides -q if both are specified")
     parser.add_argument('--config', default=os.path.dirname(os.path.realpath(__file__)) + os.sep + "conf" + os.sep + "reaper.cfg.yaml",help="Configuration file location.  Default: reaper.cfg.yaml")
+    parser.add_argument('--defaults', action='store_true' ,help="Use packag defaults for all configuration")
     parser.add_argument('--defaultconfig', default=os.path.dirname(os.path.realpath(__file__)) + os.sep + "conf" + os.sep + "reaper.cfg.defaults.yaml",help="Configuration defaults file location.  Default: reaper.cfg.defaults.yaml.  Normal users should never change this.")
     parser.add_argument('--skip-missing', action="store_true", help="Treat missing and other bad files as warnings instead of errors")
     parser.add_argument('--skip-empty', action="store_true", help="Treat empty files as warnings instead of errors")
@@ -114,6 +115,8 @@ class OrphanReaper():
     if self.args.debug:
       self.logger.setLevel(logging.DEBUG)
       self.logger.debug("args.debug specified  - setting log level to logging.DEBUG")
+    if self.args.defaults:
+        self.args.config = None
     # load device configs with specified syntax
     # dictionary of template name to set of files
     # intentionally using a set to dedupe
