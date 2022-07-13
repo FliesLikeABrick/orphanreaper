@@ -122,6 +122,7 @@ class Templates():
           if not name_matches:
             self.logger.warning("In input file %s, the following line matched the initial search but a name could not be extracted.  Check template `%s` regex for object `%s`: %s", file['filename'], template['meta']['name'], obj_def['name'], line)
             continue
+          self.logger.debug("Adding new object `%s` `%s`", obj_def['slug'], name_matches.group('name'))
           return_objects[obj_def['slug']].add(name_matches.group('name'))
     return return_objects
   def get_references(self, file):
@@ -151,12 +152,20 @@ class Templates():
             if re.search(obj_def['regex'], line):
               self.logger.debug("Skipping line `%s` due to it matching the definition of this object `%s`", line, obj_def['regex'])
               continue
-            new_ref = {}
-            name_matches = re.search(reference_def['regex'], line)
-            if not name_matches:
-              self.logger.warning("In input file %s, the following line matched the initial reference search but a name could not be extracted.  Check template `%s` regex for reference `%s`: %s", file['filename'], template['meta']['name'], ref_def['name'], line)
+            # loop through references matches in this line
+            # there can be multiple reference in a single line, for example a route-map can be referred to in a BGP aggregate
+            # at least 2 times: attribute-map, suppress-map, etc.
+            # flag if anything was found and added
+            references_found = False
+            for name_match in re.finditer(reference_def['regex'], line):
+              new_ref = {}
+              self.logger.debug("In file %s, adding reference for object `%s` `%s`, reference type `%s`, line: %s", file['filename'], obj_def['slug'], name_match.group('name'), reference_def['name'], line)
+              return_references[obj_def['slug']].add(name_match.group('name'))
+              references_found = True
+            # if nothing was found and added, log a warning because this is unexpected and may mean an odd failure/bad regex in the references definition
+            if not references_found:
+              self.logger.warning("In input file %s, the following line matched the initial reference search but a name could not be extracted.  Check template `%s` regex for reference `%s`: %s", file['filename'], template['meta']['name'], reference_def['name'], line)
               continue
-            return_references[obj_def['slug']].add(name_matches.group('name'))
     return return_references
   def get_orphans(self, file):
     '''Returns list of dicts describing configuration objects present in the given input file which have no known configuration references'''
